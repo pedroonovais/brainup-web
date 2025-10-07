@@ -32,29 +32,28 @@ export async function startQuiz(formData: FormData) {
   
 }
 
+
 export async function exitQuiz() {
-    const cookieStore = await cookies()
-    const playerId = cookieStore.get("playerId")?.value
+  const cookieStore = await cookies(); // Next 13/14: sync; Next 15: pode ser async (cookies())
+  const playerId = cookieStore.get('playerId')?.value;
 
-    if (!playerId) {
-        console.log('No player ID found in cookies.')
-        redirect('/')
-        return
-    }
+  if (!playerId) {
+    // nada pra fazer; só limpa e retorna ok
+    cookieStore.delete('playerId');
+    return { ok: true, skipped: true };
+  }
 
-    console.log(`Exiting quiz for player ID: ${playerId}`)
+  // importante: PathVariable na URL; sem body e sem Content-Type
+  const url = `${API_URL}/players/${encodeURIComponent(playerId)}/exit`;
+  const response = await fetch(url, { method: 'POST', cache: 'no-store' });
 
-    const response = await fetch(`${API_URL}/players/exit`, {
-        method: 'POST',
-        body: JSON.stringify({ playerId }),
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    if (!response?.ok) throw new Error(`Failed to exit quiz (${response.status})`)
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    console.error('exitQuiz failed:', response.status, text);
+    throw new Error(`Failed to exit quiz (${response.status})`);
+  }
 
-    cookieStore.delete("playerId")
-
-    redirect('/')
+  cookieStore.delete('playerId');
+  redirect('/'); 
+  
 }
-
